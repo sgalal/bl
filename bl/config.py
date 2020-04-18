@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
 
-here = '/home/ayaka/Hub/Bench4BL/data/Wildfly/ELY'
-chunk_size = 25  # For embeddings
+PROJECT_ROOT = '/home/ayaka/Hub/Bench4BL/data/Commons/IO'
+CHUNK_SIZE = 25  # For embeddings
+TOP_N = 10  # Predict 10 possible files
+BERT_PORT = 5555
+BERT_PORT_OUT = 5556

@@ -1,6 +1,6 @@
 # bl
 
-**N.B.:** This project is not completed yet!
+**N.B.:** This project is not ready for production!
 
 An bug localization tool using BERT
 
@@ -64,7 +64,7 @@ $ tar -zxvf frp_0.32.1_linux_amd64.tar.gz
 
 ### Setup relay server
 
-`frps_5555.ini`:
+`frps.ini`:
 
 ```ini
 [common]
@@ -72,47 +72,30 @@ bind_port = 27700
 bind_udp_port = 27701
 ```
 
-`frps_5556.ini`:
-
-```ini
-[common]
-bind_port = 27702
-bind_udp_port = 27703
-```
-
 Run:
 
 ```sh
-$ ./frps -c ./frps_5555.ini &
-$ ./frps -c ./frps_5556.ini &
+$ frps -c frps.ini &
 ```
 
 ### Setup Google Colab
 
-`frpc_5555.txt`:
+`frpc.txt`:
 
 ```ini
 [common]
 server_addr = <SERVER_IP>
 server_port = 27700
 
-[secret_ssh]
+[secret_ssh_5555_service_0]
 type = stcp
-sk = <SK>
+sk = <SK_5555>
 local_ip = 127.0.0.1
 local_port = 5555
-```
 
-`frpc_5556.txt`:
-
-```ini
-[common]
-server_addr = <SERVER_IP>
-server_port = 27702
-
-[secret_ssh]
+[secret_ssh_5556_service_0]
 type = stcp
-sk = <SK>
+sk = <SK_5556>
 local_ip = 127.0.0.1
 local_port = 5556
 ```
@@ -120,40 +103,31 @@ local_port = 5556
 Run:
 
 ```sh
-$ frp_0.32.1_linux_amd64/frpc -c frp_0.32.1_linux_amd64/frpc_5555.txt &
-$ frp_0.32.1_linux_amd64/frpc -c frp_0.32.1_linux_amd64/frpc_5556.txt &
+$ frpc -c frpc.txt &
 ```
 
 ### Setup client
 
-`frpc_user_5555.ini`:
+`frpc_user.ini`:
 
 ```ini
 [common]
 server_addr = <SERVER_IP>
 server_port = 27700
 
-[secret_ssh_visitor]
+[secret_ssh_5555_service_0]
 type = stcp
 role = visitor
-server_name = <SERVER_NAME>
-sk = <SK>
+server_name = secret_ssh_5555_service_0
+sk = <SK_5555>
 bind_addr = 127.0.0.1
 bind_port = 5555
-```
 
-`frpc_user_5556.ini`:
-
-```ini
-[common]
-server_addr = <SERVER_IP>
-server_port = 27702
-
-[secret_ssh_visitor]
+[secret_ssh_5556_service_0]
 type = stcp
 role = visitor
-server_name = <SERVER_NAME>
-sk = <SK>
+server_name = secret_ssh_5556_service_0
+sk = <SK_5556>
 bind_addr = 127.0.0.1
 bind_port = 5556
 ```
@@ -161,8 +135,7 @@ bind_port = 5556
 Run:
 
 ```sh
-$ ./frpc -c ./frpc_user_5555.ini &
-$ ./frpc -c ./frpc_user_5556.ini &
+$ frpc -c frpc_user.ini &
 ```
 
 Note that `SERVER_IP`, `SERVER_NAME` and `SK` should be setup correctly. `SERVER_NAME` and `SK` are random strings.

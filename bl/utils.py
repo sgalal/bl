@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import re
+from urllib.parse import quote
+
+JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
+	"default", "goto", "package", "synchronized", "boolean", "do", "if",
+	"private", "this", "break", "double", "implements", "protected",
+	"throw", "byte", "else", "import", "public", "throws", "case",
+	"enum", "instanceof", "return", "transient", "catch", "extends", "int",
+	"short", "try", "char", "final", "interface", "static", "void", "class",
+	"finally", "long", "strictfp", "volatile", "const", "float", "native",
+	"super", "while", "org", "eclipse", "swt", "string", "main", "args",
+	"null", "this", "extends", "true", "false"]
 
 def chunks(lst, n):
 	"""Split a list into n-sized chunks, without padding."""
@@ -8,14 +19,11 @@ def chunks(lst, n):
 
 def glob(base_path, file, ignore_string=None):
 	from pathlib import Path
-	if not ignore_string:
-		for source_file in Path(base_path).glob(file):
-			yield str(source_file.relative_to(base_path))
-	else:
-		for source_file in Path(base_path).glob(file):
-			path = str(source_file.relative_to(base_path))
-			if ignore_string not in path:
-				yield path
+	for source_file in Path(base_path).glob(file):
+		path = str(source_file.relative_to(base_path))
+		if ignore_string and ignore_string in path:
+			continue
+		yield path
 
 def memoize(func):
 	memo = {}
@@ -27,6 +35,9 @@ def memoize(func):
 			memo[args] = res
 			return res
 	return wrapper
+
+def url_encode(s):
+	return quote(s, safe='')
 
 # =============== TODO FIXME: IMPROVE THE CODE BELOW =============== #
 
@@ -44,15 +55,6 @@ def split_camel_case(s):
 
 re_tokenize_code = re.compile(r'[^a-zA-Z\'.,]+')
 def tokenize_code(s):
-	JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
-		"default", "goto", "package", "synchronized", "boolean", "do", "if",
-		"private", "this", "break", "double", "implements", "protected",
-		"throw", "byte", "else", "import", "public", "throws", "case",
-		"enum", "instanceof", "return", "transient", "catch", "extends", "int",
-		"short", "try", "char", "final", "interface", "static", "void", "class",
-		"finally", "long", "strictfp", "volatile", "const", "float", "native",
-		"super", "while", "org", "eclipse", "swt", "string", "main", "args",
-		"null", "this", "extends", "true", "false"]
 	res = []
 	for x in re_tokenize_code.split(s):
 		if x and x not in JAVA_KEYWORDS:
@@ -61,3 +63,11 @@ def tokenize_code(s):
 	return res
 
 # =============== TODO FIXME: IMPROVE THE CODE ABOVE =============== #
+
+def regularize_java_path(path):
+	'''
+	>>> regularize_path('org.wildfly.security.credential.store.impl.KeystorePasswordStore.java')
+	'org/wildfly/security/credential/store/impl/KeystorePasswordStore.java'
+	'''
+	*a, b = path.split('.')
+	return '/'.join(a) + '.' + b
