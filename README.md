@@ -14,7 +14,7 @@ $ . venv/bin/activate
 $ pip install bert-serving-server tensorflow-gpu\<2
 $ wget https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-24_H-1024_A-16.zip
 $ unzip uncased_L-24_H-1024_A-16.zip
-$ ZEROMQ_SOCK_TMP_DIR=/tmp/ bert-serving-start -model_dir uncased_L-24_H-1024_A-16 -num_worker=1 -show_tokens_to_client
+$ ZEROMQ_SOCK_TMP_DIR=/tmp/ bert-serving-start -model_dir uncased_L-24_H-1024_A-16 -max_seq_len=30 -num_worker=1 -show_tokens_to_client
 ```
 
 ## Setup client

@@ -60,7 +60,7 @@ def tokenize_code(s):
 		if x and x not in JAVA_KEYWORDS:
 			for y in split_camel_case(x):
 				res.append(y)
-	return res
+	return [' '.join(chunk) for chunk in chunks(res, 25)]
 
 # =============== TODO FIXME: IMPROVE THE CODE ABOVE =============== #
 

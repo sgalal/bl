@@ -1,5 +1,8 @@
 .mypy_cache
 __pycache__
 
+/_archives
+/data
+
 /downloads.sh
 /unpacking.sh

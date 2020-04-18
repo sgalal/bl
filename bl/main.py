@@ -17,11 +17,12 @@ from git import Repo
 from heapq import nlargest
 import logging
 import os
+import re
 import sys
 import traceback
 
 # This project
-from config import CHUNK_SIZE, BERT_PORT, BERT_PORT_OUT, PROJECT_ROOT, TOP_N
+from config import BERT_PORT, BERT_PORT_OUT, PROJECT_ROOT, TOP_N
 from utils import chunks, get_commit_before_time, glob, memoize, regularize_java_path, split_camel_case, tokenize_code, url_encode
 
 logging.basicConfig(level=logging.INFO)
@@ -62,10 +63,10 @@ def get_source_embedding(source_file_relpath, last_revision_of_file):
 
 		with open(os.path.join(repo_path, source_file_relpath)) as f:  # Open the source code file
 			content = f.read()
+			content = re.match(r'^(/\*[\s\S]+?\*/\n)?([\s\S]+)', content)[2]
 
 		source_tokens = tokenize_code(source_file_relpath + ' ' + content)
-		source_token_groups = chunks(source_tokens, CHUNK_SIZE)
-		source_embedding = bc.encode(source_token_groups, is_tokenized=True)
+		source_embedding = bc.encode(source_tokens)
 
 		np.save(embedding_data_path, source_embedding)  # Save the embedding for future use
 		return source_embedding
@@ -91,8 +92,11 @@ def main():
 			bug_commit = get_commit_before_time(repo, bug_opendate)  # Commit that the bug was reported
 
 			bug_tokens = tokenize_code(summary + ' ' + description)
-			bug_token_groups = chunks(bug_tokens, CHUNK_SIZE)
-			bug_embedding = bc.encode(bug_token_groups, is_tokenized=True)
+			if logging.root.isEnabledFor(logging.DEBUG): 
+				bug_embedding, tokens = bc.encode(bug_tokens, show_tokens=True)
+				logging.info('%s', tokens)
+			else:
+				bug_embedding = bc.encode(bug_token_groups)
 
 			repo.git.reset('--hard', bug_commit)  # Switch to the version that the bug is reported
 			logging.info('Checkout commit %s', bug_commit)
@@ -107,16 +111,16 @@ def main():
 				logging.debug('Similarity %f with file %s', maximum_similarity, source_file_relpath)
 				res.append((maximum_similarity, source_file_relpath))
 
-			predicted_files = [source_file_relpath for _, source_file_relpath in nlargest(max(TOP_N, fixed_files_count), res)]
+			# print(fixed_files_count)
+			predicted_files = [source_file_relpath for _, source_file_relpath in nlargest(TOP_N, res)]
 			logging.info('Predicted files:\n%s', '\n'.join(predicted_files))
 
 			fixed_files = [regularize_java_path(fixed_file) for fixed_file in fixed_files]
 			logging.info('Fixed files:\n%s', '\n'.join(fixed_files))
 
-			for fixed_file in fixed_files:
-				is_correct = any(predicted_file.endswith(fixed_file) for predicted_file in predicted_files)
-				count += 1
-				correct_count += is_correct
+			is_correct = any(predicted_file.endswith(fixed_file) for predicted_file in predicted_files for fixed_file in fixed_files)
+			count += 1
+			correct_count += is_correct
 
 			logging.info('Total %d, correct %d, correct rate %.1f%%', count, correct_count, correct_count / count * 100)
 
