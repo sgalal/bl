@@ -65,7 +65,7 @@ def tokenize_code(s):
 # =============== TODO FIXME: IMPROVE THE CODE ABOVE =============== #
 
 def get_commit_before_time(repo, time, branch='master'):
-	return next(repo.iter_commits(branch, before=bug_version, max_count=1)).hexsha
+	return next(repo.iter_commits(branch, before=time, max_count=1)).hexsha
 
 def regularize_java_path(path):
 	'''

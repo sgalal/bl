@@ -22,7 +22,7 @@ import traceback
 
 # This project
 from config import CHUNK_SIZE, BERT_PORT, BERT_PORT_OUT, PROJECT_ROOT, TOP_N
-from utils import chunks, glob, memoize, regularize_java_path, split_camel_case, tokenize_code, url_encode
+from utils import chunks, get_commit_before_time, glob, memoize, regularize_java_path, split_camel_case, tokenize_code, url_encode
 
 logging.basicConfig(level=logging.INFO)
 logging.info('Configuration loaded')
