@@ -2,7 +2,7 @@
 
 **N.B.:** This project is not completed yet!
 
-An experimental bug localization tool
+An bug localization tool using BERT
 
 ## Run
 
@@ -44,14 +44,14 @@ $ pip install -r requirements.txt
 
 ### Run
 
-Modify `config.py`, then:
+Modify `bl/config.py`, then:
 
 ```
 $ . venv/bin/activate
-$ ./main.py
+$ bl/main.py
 ```
 
-## Running BERT server in Google Colab
+## Running BERT server on Google Colab
 
 Google Colab \<==\> Relay server \<==\> Local client
 
@@ -62,7 +62,7 @@ $ wget https://github.com/fatedier/frp/releases/download/v0.32.1/frp_0.32.1_linu
 $ tar -zxvf frp_0.32.1_linux_amd64.tar.gz
 ```
 
-### Setup on relay server
+### Setup relay server
 
 `frps_5555.ini`:
 
@@ -87,7 +87,7 @@ $ ./frps -c ./frps_5555.ini &
 $ ./frps -c ./frps_5556.ini &
 ```
 
-### Setup on Google Colab
+### Setup Google Colab
 
 `frpc_5555.txt`:
 
@@ -124,7 +124,7 @@ $ frp_0.32.1_linux_amd64/frpc -c frp_0.32.1_linux_amd64/frpc_5555.txt &
 $ frp_0.32.1_linux_amd64/frpc -c frp_0.32.1_linux_amd64/frpc_5556.txt &
 ```
 
-### Setup on local client
+### Setup client
 
 `frpc_user_5555.ini`:
 

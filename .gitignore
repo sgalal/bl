@@ -1,2 +1,5 @@
+.mypy_cache
+__pycache__
+
 /downloads.sh
 /unpacking.sh
