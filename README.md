@@ -55,6 +55,13 @@ $ ./main.py
 
 Google Colab \<==\> Relay server \<==\> Local client
 
+Install frp:
+
+```sh
+$ wget https://github.com/fatedier/frp/releases/download/v0.32.1/frp_0.32.1_linux_amd64.tar.gz
+$ tar -zxvf frp_0.32.1_linux_amd64.tar.gz
+```
+
 ### Setup on relay server
 
 `frps_5555.ini`:
@@ -82,9 +89,32 @@ $ ./frps -c ./frps_5556.ini &
 
 ### Setup on Google Colab
 
-```sh
-$ wget https://github.com/fatedier/frp/releases/download/v0.32.1/frp_0.32.1_linux_amd64.tar.gz
-$ tar -zxvf frp_0.32.1_linux_amd64.tar.gz
+`frpc_5555.txt`:
+
+```ini
+[common]
+server_addr = <SERVER_IP>
+server_port = 27700
+
+[secret_ssh]
+type = stcp
+sk = <SK>
+local_ip = 127.0.0.1
+local_port = 5555
+```
+
+`frpc_5556.txt`:
+
+```ini
+[common]
+server_addr = <SERVER_IP>
+server_port = 27702
+
+[secret_ssh]
+type = stcp
+sk = <SK>
+local_ip = 127.0.0.1
+local_port = 5556
 ```
 
 Run:

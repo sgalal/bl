@@ -4,7 +4,7 @@
 
 logging.basicConfig(level=logging.INFO)
 
-here = '/home/ayaka/Hub/Bench4BL/data/Wildfly/WFCORE'
+here = '/home/ayaka/Hub/Bench4BL/data/Wildfly/ELY'
 bug_file_path = os.path.join(here, 'bugrepo/repository.xml')
 repo_path = os.path.join(here, 'gitrepo')
 embeddings_path = os.path.join(here, 'embeddings')
