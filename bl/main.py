@@ -82,17 +82,20 @@ def main():
 		# Ignore modification of test files
 		fixed_files = [fixed_file for fixed_file in fixed_files if 'test' not in fixed_file]
 
+		fixed_files_count = len(fixed_files)
+
 		if fixed_files:  # If the bug is fixed by modifying some files
 			summary = unescape(bug.find('./buginformation/summary').text)  # Bug title
 			description = unescape(bug.find('./buginformation/description').text or '')  # Bug description
-			bug_version = unescape(bug.find('./buginformation/version').text)  # Version that the bug was reported
+			bug_opendate = unescape(bug.attrib['opendate'])
+			bug_commit = get_commit_before_time(repo, bug_opendate)  # Commit that the bug was reported
 
 			bug_tokens = tokenize_code(summary + ' ' + description)
 			bug_token_groups = chunks(bug_tokens, CHUNK_SIZE)
 			bug_embedding = bc.encode(bug_token_groups, is_tokenized=True)
 
-			repo.git.reset('--hard', bug_version)  # Switch to the version that the bug is reported
-			logging.info('Switched to tag %s', bug_version)
+			repo.git.reset('--hard', bug_commit)  # Switch to the version that the bug is reported
+			logging.info('Checkout commit %s', bug_commit)
 
 			res = []
 			# For every source code in the current version (ignoring test files)
@@ -104,7 +107,7 @@ def main():
 				logging.debug('Similarity %f with file %s', maximum_similarity, source_file_relpath)
 				res.append((maximum_similarity, source_file_relpath))
 
-			predicted_files = [source_file_relpath for _, source_file_relpath in nlargest(TOP_N, res)]
+			predicted_files = [source_file_relpath for _, source_file_relpath in nlargest(max(TOP_N, fixed_files_count), res)]
 			logging.info('Predicted files:\n%s', '\n'.join(predicted_files))
 
 			fixed_files = [regularize_java_path(fixed_file) for fixed_file in fixed_files]
