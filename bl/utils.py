@@ -17,15 +17,7 @@ def chunks(lst, n):
 	"""Split a list into n-sized chunks, without padding."""
 	return [lst[i:i + n] for i in range(0, len(lst), n)]
 
-def glob(base_path, file, ignore_string=None):
-	from pathlib import Path
-	for source_file in Path(base_path).glob(file):
-		path = str(source_file.relative_to(base_path))
-		if ignore_string and ignore_string in path:
-			continue
-		yield path
-
-def memoize(func):
+def memorize(func):
 	memo = {}
 	def wrapper(*args):
 		try:
@@ -63,9 +55,6 @@ def tokenize_code(s):
 	return [' '.join(chunk) for chunk in chunks(res, 25)]
 
 # =============== TODO FIXME: IMPROVE THE CODE ABOVE =============== #
-
-def get_commit_before_time(repo, time, branch='master'):
-	return next(repo.iter_commits(branch, before=time, max_count=1)).hexsha
 
 def regularize_java_path(path):
 	'''

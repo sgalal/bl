@@ -46,7 +46,7 @@ $ pip install -r requirements.txt
 
 Modify `bl/config.py`, then:
 
-```
+```sh
 $ . venv/bin/activate
 $ bl/main.py
 ```
