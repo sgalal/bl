@@ -18,8 +18,11 @@ from config import BERT_IP, BERT_PORT, BERT_PORT_OUT, PROJECT_ROOT, TOP_N
 from repowrapper import RepoWrapper
 import utils
 
-logging.basicConfig(level=logging.INFO)
 logging.info('Configuration loaded')
+
+embeddings_path = os.path.join(PROJECT_ROOT, 'embeddings')
+if not os.path.exists(embeddings_path):
+	os.mkdir(embeddings_path)
 
 def calculate_similarity(bc, rw, source_file, bug_embedding):
 	'''Calculate the similarity of a file and a given bug embedding'''
@@ -34,10 +37,12 @@ def main(bc):
 	count = 0
 	correct_count = 0
 	rw = RepoWrapper(PROJECT_ROOT)
+	rw.git_fetch()
 	for bug in rw.get_bugs(has_open_date=True, fixed_only=True):
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			bug_embedding = bug.get_embedding(bc)
+			rw.git_reset('origin/master')
 			bug_commit = rw.get_commit_before(bug.open_date)
 			rw.git_reset(bug_commit)
 

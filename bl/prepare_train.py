@@ -44,7 +44,10 @@ def finalize():
 def main():
 	rw = RepoWrapper(PROJECT_ROOT)
 	rw.git_fetch()
-	for bug in rw.get_bugs(has_open_date=True, fixed_only=True):
+	for i, bug in enumerate(rw.get_bugs(has_open_date=True, fixed_only=True)):
+		if i == 300:
+			break  # Restrict to 300 bugs
+
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			rw.git_reset('origin/master')
@@ -58,7 +61,7 @@ def main():
 			# Positive examples
 			fixed_files_full_path = [source_file for source_file in source_files for fixed_file in fixed_files if source_file.endswith(fixed_file)]
 			for fixed_file in fixed_files_full_path:
-				print(fixed_file)
+				logging.info('Found fixed file: %s', fixed_file)
 				if rw.exists_file(fixed_file):
 					token_groups = rw.get_token_groups_of_file(fixed_file, chunk=True)
 					for token_group in token_groups:

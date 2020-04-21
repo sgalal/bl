@@ -47,7 +47,7 @@ class Bug:
 
 	def get_embedding(self, bc):
 		'''Get the embedding of bug, according to the bug summary and description'''
-		merged_description = self.get_merged_description()
+		merged_description = [self.get_merged_description()]
 		if logging.root.isEnabledFor(logging.DEBUG):
 			embedding, encoded_tokens = bc.encode(merged_description, show_tokens=True)
 			logging.info('%s', encoded_tokens)
@@ -119,7 +119,7 @@ class RepoWrapper:
 			return np.load(embedding_data_path)
 		else:  # If not calculated before
 			logging.debug('Embedding not found. Calculating...')
-			source_tokens = get_tokens_of_file(source_file)
+			source_tokens = self.get_token_groups_of_file(source_file, chunk=True)
 			source_embedding = bc.encode(source_tokens)
 			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use
 			return source_embedding
