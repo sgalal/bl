@@ -34,7 +34,7 @@ def main(bc):
 	count = 0
 	correct_count = 0
 	rw = RepoWrapper(PROJECT_ROOT)
-	for bug in rw.get_bugs():
+	for bug in rw.get_bugs(has_open_date=True, fixed_only=True):
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			bug_embedding = bug.get_embedding(bc)

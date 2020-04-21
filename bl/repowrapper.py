@@ -41,14 +41,18 @@ class Bug:
 						yield fixed_file.text
 		return list({x: None for x in inner()})  # Use dict comprehension instead of set to preserve insertion order
 
+	def get_merged_description(self) -> str:
+		'''This is the actual description that feeds into the BERT model'''
+		return utils.regularize_code(self.summary + ' ||| ' + self.description)
+
 	def get_embedding(self, bc):
 		'''Get the embedding of bug, according to the bug summary and description'''
-		tokens = utils.tokenize_code(self.summary + ' ||| ' + self.description)
-		if logging.root.isEnabledFor(logging.DEBUG): 
-			embedding, encoded_tokens = bc.encode(tokens, show_tokens=True)
+		merged_description = self.get_merged_description()
+		if logging.root.isEnabledFor(logging.DEBUG):
+			embedding, encoded_tokens = bc.encode(merged_description, show_tokens=True)
 			logging.info('%s', encoded_tokens)
 		else:
-			embedding = bc.encode(tokens)
+			embedding = bc.encode(merged_description)
 		return embedding
 
 class RepoWrapper:
@@ -62,9 +66,14 @@ class RepoWrapper:
 		# Objects
 		self.repo = Repo(self.repo_path)
 
-	def get_bugs(self) -> Iterator[Bug]:
+	def git_fetch(self):
+		for remote in self.repo.remotes:
+			remote.fetch()
+
+	def get_bugs(self, has_open_date=False, fixed_only=False) -> Iterator[Bug]:
 		'''Iterate through bugs in the repository'''
-		return (Bug(bug_element) for bug_element in ET.parse(self.bug_file_path).getroot())
+		xpath = './bug%s%s' % (('[@opendate]' if has_open_date else ''), ("[@resolution='Fixed']" if fixed_only else ''))
+		return (Bug(bug_element) for bug_element in ET.parse(self.bug_file_path).getroot().findall(xpath))
 
 	def get_commit_before(self, time, branch='master') -> str:
 		return next(self.repo.iter_commits(branch, before=time, max_count=1)).hexsha
@@ -84,6 +93,20 @@ class RepoWrapper:
 	def get_last_commit_of_file(self, path) -> str:
 		return next(self.repo.iter_commits(paths=path, max_count=1)).hexsha
 
+	def exists_file(self, path) -> bool:
+		'''Check if a file exists in the underlying Git repository'''
+		return os.path.exists(os.path.join(self.repo_path, path))
+
+	def get_token_groups_of_file(self, path, chunk=False) -> Union[str, List[str]]:
+		'''This is the actual tokens of file that feeds into the BERT model'''
+		with open(os.path.join(self.repo_path, path)) as f:  # Open the source code file
+			content = re.match(r'^(/\*[\s\S]+?\*/\n)?([\s\S]*)', f.read())[2]  # Skip copyright header
+		regularized_code = utils.regularize_code(path + ' ||| ' + content)
+		if not chunk:
+			return regularized_code
+		else:
+			return [' '.join(x) for x in utils.chunks(regularized_code.split(' '), chunk_size=80)]
+
 	@utils.memorize
 	def get_source_embedding(self, bc, source_file, last_commit_of_file):
 		# Construct path of embedding data
@@ -96,12 +119,7 @@ class RepoWrapper:
 			return np.load(embedding_data_path)
 		else:  # If not calculated before
 			logging.debug('Embedding not found. Calculating...')
-
-			with open(os.path.join(self.repo_path, source_file)) as f:  # Open the source code file
-				content = re.match(r'^(/\*[\s\S]+?\*/\n)?([\s\S]*)', f.read())[2]
-
-			source_tokens = utils.tokenize_code(source_file + ' ||| ' + content)
+			source_tokens = get_tokens_of_file(source_file)
 			source_embedding = bc.encode(source_tokens)
-
 			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use
 			return source_embedding

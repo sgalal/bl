@@ -11,11 +11,17 @@ JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 	"short", "try", "char", "final", "interface", "static", "void", "class",
 	"finally", "long", "strictfp", "volatile", "const", "float", "native",
 	"super", "while", "org", "eclipse", "swt", "string", "main", "args",
-	"null", "this", "extends", "true", "false"]
+	"null", "this", "extends", "true", "false",
+	"map", "java", "util", "tree", "set", "concurrent", "push", "keys", "iter"]
 
-def chunks(lst, n):
-	"""Split a list into n-sized chunks, without padding."""
-	return [lst[i:i + n] for i in range(0, len(lst), n)]
+def chunks(lst, chunk_size):
+	"""Split a list into n-sized chunks, without padding"""
+	a = [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
+	# Combine the last two elements to ensure the size is never smaller than n
+	if len(a) > 1:
+		a[-2] += a[-1]
+		a.pop()
+	return a
 
 def memorize(func):
 	memo = {}
@@ -31,30 +37,30 @@ def memorize(func):
 def url_encode(s):
 	return quote(s, safe='')
 
-# =============== TODO FIXME: IMPROVE THE CODE BELOW =============== #
-
-re_split_camel_case = re.compile(r'[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))')
-def split_camel_case(s):
+def regularize_code(s):
 	'''
-	>>> list(split_camel_case('AaaBgsHhTTPRequest'))
-	['aaa', 'bgs', 'hh', 'ttp', 'request']
+	Regularize JAVA code to feed to the BERT model
+	>>> regularize_code('aBcDefHTTPIjkl_mnOpqR')
+	'a bc def http ijkl mn opq r'
+	>>> regularize_code('#import { a *= 2; return x; }')
+	'# a 2 x'
 	'''
-	if s:
-		if s[0].islower():
-			s = s[0].upper() + s[1:]
-		for x in re_split_camel_case.findall(s):
-			yield x.lower()
-
-re_tokenize_code = re.compile(r'[^a-zA-Z\'.,]+')
-def tokenize_code(s):
-	res = []
-	for x in re_tokenize_code.split(s):
-		if x and x not in JAVA_KEYWORDS:
-			for y in split_camel_case(x):
-				res.append(y)
-	return [' '.join(chunk) for chunk in chunks(res, 25)]
-
-# =============== TODO FIXME: IMPROVE THE CODE ABOVE =============== #
+	# Handle Java packages
+	s = re.sub(r'(\S)\.(\S)', r'\1 \2', s)
+	# Handle camelcases
+	s = re.sub(r'(\S)_(\S)', r'\1 \2', s)
+	s = re.sub(r'([a-z])([A-Z])', r'\1 \2', s)
+	s = re.sub(r'([A-Z])([A-Z])([a-z])', r'\1 \2\3', s)
+	# Handle Java symbols
+	s = re.sub(r'''[@{}+=*/%!<>&|:~^;()\[\]"]''', ' ', s)
+	s = re.sub(r' [\-?] ', ' ', s)
+	# Remove stopwords
+	for word in JAVA_KEYWORDS:
+		s = re.sub(r'\b' + word + r'\b', '', s, flags=re.IGNORECASE)
+	# Remove redundant whitespaces
+	s = re.sub(r'\s+', ' ', s)
+	# Lower the characters since we are using the uncased BERT model
+	return s.lower()
 
 def regularize_java_path(path):
 	'''
