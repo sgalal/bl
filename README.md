@@ -44,7 +44,22 @@ $ pip install -r requirements.txt
 
 ### Run
 
-Modify `bl/config.py`, then:
+Create `bl/config.py`, like:
+
+```sh
+# -*- coding: utf-8 -*-
+
+import logging
+logging.basicConfig(level=logging.INFO)
+
+PROJECT_ROOT = '/home/ayaka/Hub/Bench4BL/data/Apache/HBASE'
+TOP_N = 10  # Predict 10 possible files
+BERT_IP = '172.23.160.1'
+BERT_PORT = 5555
+BERT_PORT_OUT = 5556
+```
+
+Run:
 
 ```sh
 $ . venv/bin/activate

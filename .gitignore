@@ -9,5 +9,7 @@ __pycache__
 /downloads.sh
 /unpacking.sh
 
+/bl/config.py
+
 *.sqlite3
 *.sqlite3-journal
