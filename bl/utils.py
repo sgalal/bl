@@ -12,7 +12,8 @@ JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 	"finally", "long", "strictfp", "volatile", "const", "float", "native",
 	"super", "while", "org", "eclipse", "swt", "string", "main", "args",
 	"null", "this", "extends", "true", "false",
-	"map", "java", "util", "tree", "set", "concurrent", "push", "keys", "iter"]
+	"map", "java", "util", "tree", "set", "concurrent", "push", "keys", "iter",
+	"exception", "io"]
 
 def chunks(lst, chunk_size):
 	"""Split a list into n-sized chunks, without padding"""

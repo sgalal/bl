@@ -45,20 +45,22 @@ $ pip install "GitPython>=3.1,<3.2"
 $ bl/prepare_train.py
 ```
 
+This will generate `data.sqlite3`.
+
 Prepare BERT model:
 
 ```sh
 $ pip install "tensorflow-gpu<2"
-$ wget https://storage.googleapis.com/bert_models/2020_02_20/uncased_L-4_H-512_A-8.zip
-$ mkdir uncased_L-4_H-512_A-8
-$ unzip uncased_L-4_H-512_A-8.zip -d uncased_L-4_H-512_A-8
+$ wget https://storage.googleapis.com/bert_models/2020_02_20/uncased_L-8_H-256_A-4.zip
+$ mkdir uncased_L-8_H-256_A-4
+$ unzip uncased_L-8_H-256_A-4.zip -d uncased_L-8_H-256_A-4
 ```
 
 Clone BERT repository:
 
 ```sh
 $ git clone https://github.com/sgalal/bert.git --branch bl
-$ export BERT_BASE_DIR=`pwd`/uncased_L-4_H-512_A-8
+$ export BERT_BASE_DIR=`pwd`/uncased_L-8_H-256_A-4
 $ export BERT_REPO_DIR=`pwd`/bert
 ```
 
@@ -81,7 +83,7 @@ $ python run_classifier.py \
   --output_dir=/tmp/blpr_output/
 ```
 
-## Setup BERT server with fine-tuned BERT model
+## Run BERT server with fine-tuned BERT model
 
 Prepare BERT model and the fine-tuning output `/tmp/blpr_output/`.
 
@@ -89,7 +91,7 @@ Run:
 
 ```sh
 $ pip install "tensorflow-gpu<2" bert-serving-server
-$ bert-serving-start -model_dir=uncased_L-4_H-512_A-8 -tuned_model_dir=/tmp/blpr_output/ -ckpt_name=model.ckpt-4227 -max_seq_len=512 -num_worker=1 -show_tokens_to_client
+$ bert-serving-start -model_dir=uncased_L-8_H-256_A-4 -tuned_model_dir=/tmp/blpr_output/ -ckpt_name=model.ckpt-4227 -max_seq_len=192 -num_worker=1 -show_tokens_to_client
 ```
 
 ## Run client

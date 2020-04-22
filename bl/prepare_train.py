@@ -28,11 +28,17 @@ conn = sqlite3.connect(os.path.join(here, '../data.sqlite3'))
 cur = conn.cursor()
 
 cur.execute('''
-CREATE TABLE IF NOT EXISTS data
-( 'id' INTEGER PRIMARY KEY
-, 'bug_description' TEXT NOT NULL
-, 'token_group' TEXT NOT NULL
-, 'label' TEXT NOT NULL
+CREATE TABLE IF NOT EXISTS bugs
+( id INTEGER PRIMARY KEY
+, bug_description TEXT NOT NULL
+);''')
+
+cur.execute('''
+CREATE TABLE IF NOT EXISTS file_segments
+( id INTEGER PRIMARY KEY
+, bug_id INTEGER NOT NULL REFERENCES bugs(id)
+, token_group TEXT NOT NULL
+, label TEXT NOT NULL
 );''')
 
 def finalize():
@@ -54,6 +60,7 @@ def main():
 			bug_commit = rw.get_commit_before(bug.open_date)
 			rw.git_reset(bug_commit)
 			bug_description = bug.get_merged_description()
+			cur.execute('INSERT INTO bugs VALUES (?, ?)', (i, bug_description))
 
 			# Git repo
 			source_files = list(rw.glob('**/*.java', ignore_string='test'))
@@ -65,7 +72,7 @@ def main():
 				if rw.exists_file(fixed_file):
 					token_groups = rw.get_token_groups_of_file(fixed_file, chunk=True)
 					for token_group in token_groups:
-						cur.execute('INSERT INTO data VALUES (?, ?, ?, ?)', (None, bug_description, token_group, '1'))
+						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, i, token_group, '1'))
 
 			# Negative examples
 			choice_count = min(len(source_files), 8)
@@ -74,7 +81,7 @@ def main():
 			for unrelated_file in chosen_unrelated_files:
 					token_groups = rw.get_token_groups_of_file(unrelated_file, chunk=True)
 					for token_group in token_groups:
-						cur.execute('INSERT INTO data VALUES (?, ?, ?, ?)', (None, bug_description, token_group, '0'))
+						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, i, token_group, '0'))
 
 if __name__ == '__main__':
 	try:

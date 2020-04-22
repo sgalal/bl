@@ -43,7 +43,8 @@ class Bug:
 
 	def get_merged_description(self) -> str:
 		'''This is the actual description that feeds into the BERT model'''
-		return utils.regularize_code(self.summary + ' ||| ' + self.description)
+		merged_description = utils.regularize_code(self.summary + ' ||| ' + self.description)
+		return ' '.join(merged_description.split(' ')[:80])  # Only take the first 80 tokens
 
 	def get_embedding(self, bc):
 		'''Get the embedding of bug, according to the bug summary and description'''
