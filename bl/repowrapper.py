@@ -118,7 +118,7 @@ class RepoWrapper:
 		if os.path.exists(embedding_data_path):  # If the embedding is already calculated before
 			return np.load(embedding_data_path)
 		else:  # If not calculated before
-			logging.debug('Embedding not found. Calculating...')
+			logging.info('Embedding not found. Calculating...')
 			source_tokens = self.get_token_groups_of_file(source_file, chunk=True)
 			source_embedding = bc.encode(source_tokens)
 			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use

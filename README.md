@@ -4,22 +4,9 @@
 
 An bug localization tool using BERT
 
-## Run
+Prerequisite: Python 3.6+
 
-## Setup server
-
-```sh
-$ virtualenv venv -p `which python3`
-$ . venv/bin/activate
-$ pip install bert-serving-server tensorflow-gpu\<2
-$ wget https://storage.googleapis.com/bert_models/2018_10_18/uncased_L-24_H-1024_A-16.zip
-$ unzip uncased_L-24_H-1024_A-16.zip
-$ ZEROMQ_SOCK_TMP_DIR=/tmp/ bert-serving-start -model_dir uncased_L-24_H-1024_A-16 -max_seq_len=30 -num_worker=1 -show_tokens_to_client
-```
-
-## Setup client
-
-### Data Preparation
+## Data Preparation
 
 [samasaki/Bench4BL](https://github.com/samasaki/Bench4BL/blob/master/downloads.sh)
 
@@ -32,19 +19,9 @@ $ sh unpacking.sh _archives data
 
 The scripts downloads the archives to `_archives` directory, then unpacks them to `data` directory.
 
-### Setup BERT client
+## Configuration
 
-Prerequisite: Python 3.6+
-
-```sh
-$ virtualenv venv -p `which python3`
-$ . venv/bin/activate
-$ pip install -r requirements.txt
-```
-
-### Run
-
-Create `bl/config.py`, like:
+Create `bl/config.py` as follows:
 
 ```sh
 # -*- coding: utf-8 -*-
@@ -59,9 +36,66 @@ BERT_PORT = 5555
 BERT_PORT_OUT = 5556
 ```
 
+## Fine-tuning BERT
+
+Prepare data:
+
+```sh
+$ pip install "GitPython>=3.1,<3.2"
+$ bl/prepare_train.py
+```
+
+Prepare BERT model:
+
+```sh
+$ pip install "tensorflow-gpu<2"
+$ wget https://storage.googleapis.com/bert_models/2020_02_20/uncased_L-4_H-512_A-8.zip
+$ mkdir uncased_L-4_H-512_A-8
+$ unzip uncased_L-4_H-512_A-8.zip -d uncased_L-4_H-512_A-8
+```
+
+Clone BERT repository:
+
+```sh
+$ git clone https://github.com/sgalal/bert.git --branch bl
+$ export BERT_BASE_DIR=`pwd`/uncased_L-4_H-512_A-8
+$ export BERT_REPO_DIR=`pwd`/bert
+```
+
 Run:
 
 ```sh
+$ cd bert
+$ python run_classifier.py \
+  --task_name=BLPR \
+  --do_train=true \
+  --do_eval=true \
+  --data_dir=$BERT_REPO_DIR/.. \
+  --vocab_file=$BERT_BASE_DIR/vocab.txt \
+  --bert_config_file=$BERT_BASE_DIR/bert_config.json \
+  --init_checkpoint=$BERT_BASE_DIR/bert_model.ckpt \
+  --max_seq_length=512 \
+  --train_batch_size=32 \
+  --learning_rate=2e-5 \
+  --num_train_epochs=3.0 \
+  --output_dir=/tmp/blpr_output/
+```
+
+## Setup BERT server with fine-tuned BERT model
+
+Prepare BERT model and the fine-tuning output `/tmp/blpr_output/`.
+
+Run:
+
+```sh
+$ pip install "tensorflow-gpu<2" bert-serving-server
+$ bert-serving-start -model_dir=uncased_L-4_H-512_A-8 -tuned_model_dir=/tmp/blpr_output/ -ckpt_name=model.ckpt-4227 -max_seq_len=512 -num_worker=1 -show_tokens_to_client
+```
+
+## Run client
+
+```sh
+$ pip install bert-serving-client "GitPython>=3.1,<3.2"
 $ . venv/bin/activate
 $ bl/main.py
 ```

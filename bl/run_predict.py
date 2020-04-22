@@ -36,6 +36,7 @@ def calculate_similarity(bc, rw, source_file, bug_embedding):
 def main(bc):
 	count = 0
 	correct_count = 0
+	avgp = 0
 	rw = RepoWrapper(PROJECT_ROOT)
 	rw.git_fetch()
 	for bug in rw.get_bugs(has_open_date=True, fixed_only=True):
@@ -52,10 +53,23 @@ def main(bc):
 			logging.info('Predicted files:\n%s', '\n'.join(predicted_files))
 			logging.info('Fixed files:\n%s', '\n'.join(fixed_files))
 
-			is_correct = any(predicted_file.endswith(fixed_file) for predicted_file in predicted_files for fixed_file in fixed_files)
 			count += 1
+
+			# Top N Rank
+			is_correct = any(predicted_file.endswith(fixed_file) for predicted_file in predicted_files for fixed_file in fixed_files)
 			correct_count += is_correct
-			logging.info('Total %d, correct %d, correct rate %.1f%%', count, correct_count, correct_count / count * 100)
+			topnrank = correct_count / count
+
+			# AvgP
+			acc = 0
+			for i, predicted_file in enumerate(predicted_files):
+				pj = sum(predicted_file.endswith(fixed_file) for predicted_file in predicted_files[:i + 1] for fixed_file in fixed_files) / (i + 1)
+				posj = any(predicted_files[i].endswith(fixed_file) for fixed_file in fixed_files)
+				acc += pj * posj
+			avgp += 0 if not acc else (acc / sum(predicted_file.endswith(fixed_file) for predicted_file in predicted_files for fixed_file in fixed_files))
+			map_num = avgp / count
+
+			logging.info('Total %d, correct %d, top N rank %.1f%%, map %.3f', count, correct_count, topnrank * 100, map_num)
 
 if __name__ == '__main__':
 	with BertClient(ip=BERT_IP, port=BERT_PORT, port_out=BERT_PORT_OUT, show_server_config=logging.root.isEnabledFor(logging.DEBUG)) as bc:
