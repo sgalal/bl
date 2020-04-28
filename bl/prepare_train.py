@@ -51,14 +51,10 @@ def main():
 	rw = RepoWrapper(PROJECT_ROOT)
 	rw.git_fetch()
 	for i, bug in enumerate(rw.get_bugs(has_open_date=True, fixed_only=True)):
-		if i == 300:
-			break  # Restrict to 300 bugs
-
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
-			rw.git_reset('origin/master')
 			bug_commit = rw.get_commit_before(bug.open_date)
-			rw.git_reset(bug_commit)
+			rw.git_checkout(bug_commit)
 			bug_description = bug.get_merged_description()
 			cur.execute('INSERT INTO bugs VALUES (?, ?)', (i, bug_description))
 

@@ -91,7 +91,7 @@ Run:
 
 ```sh
 $ pip install "tensorflow-gpu<2" bert-serving-server
-$ bert-serving-start -model_dir=uncased_L-8_H-256_A-4 -tuned_model_dir=/tmp/blpr_output/ -ckpt_name=model.ckpt-4227 -max_seq_len=192 -num_worker=1 -show_tokens_to_client
+$ bert-serving-start -model_dir=uncased_L-10_H-256_A-4 -tuned_model_dir=/tmp/blpr_output/ -ckpt_name=model.ckpt-18992 -max_seq_len=192 -num_worker=1 -show_tokens_to_client
 ```
 
 ## Run client
@@ -99,5 +99,5 @@ $ bert-serving-start -model_dir=uncased_L-8_H-256_A-4 -tuned_model_dir=/tmp/blpr
 ```sh
 $ pip install bert-serving-client "GitPython>=3.1,<3.2"
 $ . venv/bin/activate
-$ bl/main.py
+$ bl/run_predict.py
 ```

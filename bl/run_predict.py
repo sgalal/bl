@@ -20,9 +20,12 @@ import utils
 
 logging.info('Configuration loaded')
 
-embeddings_path = os.path.join(PROJECT_ROOT, 'embeddings')
-if not os.path.exists(embeddings_path):
-	os.mkdir(embeddings_path)
+path = os.path.join(PROJECT_ROOT, 'embeddings')
+if not os.path.exists(path):
+	os.mkdir(path)
+path = os.path.join(PROJECT_ROOT, 'bug_embeddings')
+if not os.path.exists(path):
+	os.mkdir(path)
 
 def calculate_similarity(bc, rw, source_file, bug_embedding):
 	'''Calculate the similarity of a file and a given bug embedding'''
@@ -43,9 +46,8 @@ def main(bc):
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			bug_embedding = bug.get_embedding(bc)
-			rw.git_reset('origin/master')
 			bug_commit = rw.get_commit_before(bug.open_date)
-			rw.git_reset(bug_commit)
+			rw.git_checkout(bug_commit)
 
 			similarities_of_files = (calculate_similarity(bc, rw, source_file, bug_embedding) for source_file in rw.glob('**/*.java', ignore_string='test'))
 
