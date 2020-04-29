@@ -43,7 +43,7 @@ def calculate_similarity(bc, rw, source_file, bug_embedding):
 	last_commit_of_file = rw.get_last_commit_of_file(source_file)
 	source_embedding = rw.get_source_embedding(bc, source_file, last_commit_of_file)
 	similarities = cosine_similarity(bug_embedding, source_embedding)
-	maximum_similarity = average_of_n_largest_in_array(similarities, 3)  # Use the 3 maximum value as the final similarity
+	maximum_similarity = average_of_n_largest_in_array(similarities, 2)  # Use the 2 maximum value as the final similarity
 	logging.debug('Similarity %f with file %s', maximum_similarity, source_file)
 	return maximum_similarity, source_file
 

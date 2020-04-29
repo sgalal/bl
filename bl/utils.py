@@ -18,8 +18,8 @@ JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 def chunks(lst, chunk_size):
 	"""Split a list into n-sized chunks, without padding"""
 	a = [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
-	# Combine the last two elements to ensure the size is never smaller than n
-	if len(a) > 1:
+	# Combine the last two elements to ensure the size is never smaller than n/2
+	if len(a) > 1 and len(a[-1]) < (chunk_size // 2):
 		a[-2] += a[-1]
 		a.pop()
 	return a

@@ -50,13 +50,14 @@ def finalize():
 def main():
 	rw = RepoWrapper(PROJECT_ROOT)
 	rw.git_fetch()
-	for i, bug in enumerate(rw.get_bugs(has_open_date=True, fixed_only=True)):
+	for bug in rw.get_bugs(has_open_date=True, fixed_only=True):
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			bug_commit = rw.get_commit_before(bug.open_date)
 			rw.git_checkout(bug_commit.hexsha)
 			bug_description = bug.get_merged_description()
-			cur.execute('INSERT INTO bugs VALUES (?, ?)', (i, bug_description))
+			cur.execute('INSERT INTO bugs VALUES (?, ?)', (None, bug_description))
+			bug_id = cur.lastrowid
 
 			# Git repo
 			source_files = list(rw.glob('**/*.java', ignore_string='test'))
@@ -68,7 +69,7 @@ def main():
 				if rw.exists_file(fixed_file):
 					token_groups = rw.get_token_groups_of_file(fixed_file, chunk=True)
 					for token_group in token_groups:
-						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, i, token_group, '1'))
+						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, bug_id, token_group, '1'))
 
 			# Negative examples
 			choice_count = min(len(source_files), 8)
@@ -77,7 +78,7 @@ def main():
 			for unrelated_file in chosen_unrelated_files:
 					token_groups = rw.get_token_groups_of_file(unrelated_file, chunk=True)
 					for token_group in token_groups:
-						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, i, token_group, '0'))
+						cur.execute('INSERT INTO file_segments VALUES (?, ?, ?, ?)', (None, bug_id, token_group, '0'))
 
 if __name__ == '__main__':
 	try:

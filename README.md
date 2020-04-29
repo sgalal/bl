@@ -21,15 +21,9 @@ The scripts downloads the archives to `_archives` directory, then unpacks them t
 
 ## Configuration
 
-Create `bl/config.py` as follows:
+Copy `bl/config.template.py` to `bl/config.py`, then modify the configuration:
 
 ```sh
-# -*- coding: utf-8 -*-
-
-import logging
-logging.basicConfig(level=logging.INFO)
-
-PROJECT_ROOT = '/home/ayaka/Hub/Bench4BL/data/Apache/HBASE'
 TOP_N = 10  # Predict 10 possible files
 BERT_IP = '172.23.160.1'
 BERT_PORT = 5555
@@ -41,8 +35,28 @@ BERT_PORT_OUT = 5556
 Prepare data:
 
 ```sh
+cd WEAVER/gitrepo
+git checkout master 
+git pull
+git checkout master
+git pull
+cd ../.
+```
+
+```sh
 $ pip install "GitPython>=3.1,<3.2"
-$ bl/prepare_train.py
+$ cat > run.sh
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/CODEC
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/COLLECTIONS
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/COMPRESS
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/CONFIGURATION
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/CRYPTO
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/CSV
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/IO
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/LANG
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/MATH
+bl/prepare_train.py --project-root ../Bench4BL/data/Commons/WEAVER
+$ sh run.sh
 ```
 
 This will generate `data.sqlite3`.
@@ -99,5 +113,5 @@ $ bert-serving-start -model_dir=uncased_L-10_H-256_A-4 -tuned_model_dir=/tmp/blp
 ```sh
 $ pip install bert-serving-client "GitPython>=3.1,<3.2"
 $ . venv/bin/activate
-$ bl/run_predict.py
+$ bl/run_predict.py --project-root ../Bench4BL/data/Commons/COMPRESS
 ```

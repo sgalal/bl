@@ -48,7 +48,7 @@ class Bug:
 	def get_merged_description(self) -> str:
 		'''This is the actual description that feeds into the BERT model'''
 		merged_description = utils.regularize_code(self.summary + ' ' + self.description)
-		return ' '.join(merged_description.split(' ')[:80])  # Only take the first 80 tokens
+		return ' '.join(merged_description.split(' ')[:32])  # Only take the first 32 tokens
 
 	def get_embedding(self, bc):
 		'''Get the embedding of bug, according to the bug summary and description'''
@@ -116,7 +116,7 @@ class RepoWrapper:
 		if not chunk:
 			return regularized_code
 		else:
-			return [' '.join(x) for x in utils.chunks(regularized_code.split(' '), chunk_size=80)]
+			return [' '.join(x) for x in utils.chunks(regularized_code.split(' '), chunk_size=32)]
 
 	@utils.memorize
 	def get_source_embedding(self, bc, source_file, last_commit_of_file):

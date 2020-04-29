@@ -9,6 +9,8 @@ __pycache__
 /downloads.sh
 /unpacking.sh
 
+/run.sh
+
 /bl/config.py
 
 *.sqlite3
