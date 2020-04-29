@@ -11,6 +11,7 @@ from heapq import nlargest
 import logging
 import os
 import sys
+import time
 import traceback
 
 # This project
@@ -27,12 +28,22 @@ path = os.path.join(PROJECT_ROOT, 'bug_embeddings')
 if not os.path.exists(path):
 	os.mkdir(path)
 
+def format_epoch(epoch):
+	return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
+
+def average_of_n_largest_in_array(arr, n):
+	assert arr.shape[0] == 1
+	if arr.shape[1] <= n:
+		return np.mean(arr[0])
+	else:
+		return np.mean(np.partition(arr, -n)[0][-n:])
+
 def calculate_similarity(bc, rw, source_file, bug_embedding):
 	'''Calculate the similarity of a file and a given bug embedding'''
 	last_commit_of_file = rw.get_last_commit_of_file(source_file)
 	source_embedding = rw.get_source_embedding(bc, source_file, last_commit_of_file)
 	similarities = cosine_similarity(bug_embedding, source_embedding)
-	maximum_similarity = np.amax(similarities)  # Use the maximum value as the final similarity
+	maximum_similarity = average_of_n_largest_in_array(similarities, 3)  # Use the 3 maximum value as the final similarity
 	logging.debug('Similarity %f with file %s', maximum_similarity, source_file)
 	return maximum_similarity, source_file
 
@@ -47,7 +58,11 @@ def main(bc):
 		if fixed_files:
 			bug_embedding = bug.get_embedding(bc)
 			bug_commit = rw.get_commit_before(bug.open_date)
-			rw.git_checkout(bug_commit)
+			rw.git_checkout(bug_commit.hexsha)
+
+			logging.info('Workspace commit date: %s', format_epoch(bug_commit.committed_date))
+			logging.info('Bug open date: %s', bug.open_date)
+			logging.info('Bug fix date: %s', bug.fix_date)
 
 			similarities_of_files = (calculate_similarity(bc, rw, source_file, bug_embedding) for source_file in rw.glob('**/*.java', ignore_string='test'))
 

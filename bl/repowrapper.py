@@ -27,6 +27,7 @@ class Bug:
 		self.description = unescape(bug_element.find('./buginformation/description').text or '')
 		self.id = unescape(bug_element.attrib['id'])
 		self.open_date = unescape(bug_element.attrib['opendate'])
+		self.fix_date = unescape(bug_element.attrib['fixdate'])
 		self.bug_embeddings_path = os.path.join(project_root, 'bug_embeddings')
 
 	def get_fixed_files(self, modified_only=False, ignore_test=False, regularize_java_path=False) -> List[str]:
@@ -86,11 +87,11 @@ class RepoWrapper:
 		return (Bug(self.project_root, bug_element) for bug_element in ET.parse(self.bug_file_path).getroot().findall(xpath))
 
 	def get_commit_before(self, time, branch='master') -> str:
-		return next(self.repo.iter_commits(branch, before=time, max_count=1)).hexsha
+		return next(self.repo.iter_commits(branch, before=time, max_count=1))
 
 	def git_checkout(self, commit) -> None:
 		'''Check out the underlying git repository'''
-		self.repo.git.checkout(commit)
+		self.repo.git.checkout(commit, force=True)
 		logging.info('Checked out commit %s', commit)
 
 	def glob(self, pattern, ignore_string=None) -> Iterator[str]:
@@ -109,7 +110,7 @@ class RepoWrapper:
 
 	def get_token_groups_of_file(self, path, chunk=False) -> Union[str, List[str]]:
 		'''This is the actual tokens of file that feeds into the BERT model'''
-		with open(os.path.join(self.repo_path, path)) as f:  # Open the source code file
+		with open(os.path.join(self.repo_path, path), errors='ignore') as f:  # Open the source code file
 			content = re.match(r'^(/\*[\s\S]+?\*/\n)?([\s\S]*)', f.read())[2]  # Skip copyright header
 		regularized_code = utils.regularize_code(path + ' ' + content)
 		if not chunk:

@@ -54,7 +54,7 @@ def main():
 		fixed_files = bug.get_fixed_files(modified_only=True, ignore_test=True, regularize_java_path=True)
 		if fixed_files:
 			bug_commit = rw.get_commit_before(bug.open_date)
-			rw.git_checkout(bug_commit)
+			rw.git_checkout(bug_commit.hexsha)
 			bug_description = bug.get_merged_description()
 			cur.execute('INSERT INTO bugs VALUES (?, ?)', (i, bug_description))
 
