@@ -76,18 +76,17 @@ def trim_full_path(s):
 	return re.sub(r'^.+?/java/', '', s, flags=re.MULTILINE).replace('/', '.')
 
 def sanitize_patch(patch):
-	'''Sanitize git diff to keep only the removed part ans its context'''
+	'''Sanitize the output of git diff to keep only the removed part ans its context'''
 	if not patch:  # The file is actually not modified
 		return patch
-
-	res = []
-	with io.StringIO(patch) as f:
-		for _ in range(5):
-			next(f)  # Skip patch header
-		for line in f:
-			if line and line[0] in '- ':  # is removed line or its context
-				res.append(line[1:])
-	return ''.join(res)
+	def inner():
+		with io.StringIO(patch) as f:
+			for _ in range(5):
+				next(f)  # Skip patch header
+			for line in f:
+				if line and line[0] in '- ':  # The line is a removed line or its context
+					yield line[1:]
+	return ''.join(inner())
 
 def list_all_source_files(repo, commit='master', pattern='.java') -> List[str]:
 	return [file.path for file in repo.tree(commit).traverse() if file.type == 'blob' and file.path.endswith(pattern)]
@@ -113,8 +112,7 @@ def get_similarity_score(bug_embedding, source_embedding):
 	return (maximum_similarity * 1000 - 930) / 20
 
 def calculate_top_n_rank(source_files, fixed_files):
-	predicted_files = [source_file for source_file in source_files[:TOP_N]]
-	return any(predicted_file == fixed_file for predicted_file in predicted_files for fixed_file in fixed_files)
+	return any(source_file == fixed_file for source_file in source_files[:TOP_N] for fixed_file in fixed_files)
 
 def calculate_map(source_files, fixed_files):
 	acc = 0
@@ -123,28 +121,29 @@ def calculate_map(source_files, fixed_files):
 		posj = any(source_file == fixed_file for fixed_file in fixed_files)
 		acc += pj * posj
 	positive_count = sum(predicted_file == fixed_file for predicted_file in source_files for fixed_file in fixed_files)
-	assert positive_count != 0, 'As we ensure that every fixed file exists in the underlying repository, this exception should never happen'
+	assert positive_count != 0, 'As we have ensured that every fixed file exists in the underlying repository, ' \
+		'this exception should never happen'
 	return acc / positive_count
 
 def calculate_mrr(source_files, fixed_files):
 	for i, source_file in enumerate(source_files, start=1):
 		if any(source_file == fixed_file for fixed_file in fixed_files):
 			return 1 / i
-	raise Exception('As we ensure that every fixed file exists in the underlying repository, this exception should never happen')
+	raise Exception('As we ensure that every fixed file exists in the underlying repository, ' \
+		'this exception should never happen')
 
 def predict_bug(bc, rw, bug):
-	similarity_scores_and_source_files = []
+	def inner():
+		for source_file in list_all_source_files(rw.repo, commit=bug.bug_open_sha):
+			source_embedding = rw.get_source_embedding(bc, source_file, commit=bug.bug_open_sha)
 
-	for source_file in list_all_source_files(rw.repo, commit=bug.bug_open_sha):
-		source_embedding = rw.get_source_embedding(bc, source_file, commit=bug.bug_open_sha)
+			similarity_score = get_similarity_score(bug.embedding, source_embedding)
 
-		similarity_score = get_similarity_score(bug.embedding, source_embedding)
+			final_score = similarity_score
 
-		final_score = similarity_score
+			yield similarity_score, source_file
+	similarity_scores_and_source_files = sorted(inner(), reverse=True)
 
-		similarity_scores_and_source_files.append((similarity_score, source_file))
-
-	similarity_scores_and_source_files = sorted(similarity_scores_and_source_files, reverse=True)
 	source_files = [source_file for _, source_file in similarity_scores_and_source_files]
 
 	top_n_rank = calculate_top_n_rank(source_files, bug.fixed_files)
