@@ -2,11 +2,13 @@
 
 from datetime import datetime
 from git import Repo
+import json
 import logging
 import numpy as np
 import os
 import pickle
 import re
+from types import SimpleNamespace
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import unescape
 
@@ -14,64 +16,44 @@ import utils
 
 logging.basicConfig(level=logging.DEBUG)
 
-class Bug:
-	def __init__(self, rw, bug_element):
-		# Ensure the bug is fixed (not a duplicate bug report)
-		is_fixed = bug_element.attrib.get('resolution') in ('Fixed', 'Complete')
-		if not is_fixed:
-			self.valid = False
-			return
+def make_bug(rw, bug_element):
+	bug = SimpleNamespace()
 
-		self.id = unescape(bug_element.attrib['id'])
-		summary = unescape(bug_element.find('./buginformation/summary').text)
-		description = unescape(bug_element.find('./buginformation/description').text or '')
-		self.text = summary + '. ' + description
+	# Ensure the bug is fixed (not a duplicate bug report)
+	is_fixed = bug_element.attrib.get('resolution') in ('Fixed', 'Complete')
+	if not is_fixed:
+		return
 
-		self.open_date = unescape(bug_element.attrib.get('opendate'))
-		self.fix_date = unescape(bug_element.attrib.get('fixdate'))
-		if not (self.open_date and self.fix_date):
-			self.valid = False
-			return
+	bug.id = unescape(bug_element.attrib['id'])
+	summary = unescape(bug_element.find('./buginformation/summary').text)
+	description = unescape(bug_element.find('./buginformation/description').text or '')
+	bug.text = summary + '. ' + description
 
-		# Ensure the open date is earlier than the close date
-		self.open_date_obj = datetime.strptime(self.open_date, '%Y-%m-%d %H:%M:%S')
-		self.fix_date_obj = datetime.strptime(self.fix_date, '%Y-%m-%d %H:%M:%S')
-		is_valid_time = self.fix_date_obj > self.open_date_obj
-		if not is_valid_time:
-			self.valid = False
-			return
+	bug.open_date = unescape(bug_element.attrib.get('opendate'))
+	bug.fix_date = unescape(bug_element.attrib.get('fixdate'))
+	if not (bug.open_date and bug.fix_date):
+		return
 
-		fixed_files = bug_element.findall("./fixedFiles/file")
+	# Ensure the open date is earlier than the close date
+	open_date_obj = datetime.strptime(bug.open_date, '%Y-%m-%d %H:%M:%S')
+	fix_date_obj = datetime.strptime(bug.fix_date, '%Y-%m-%d %H:%M:%S')
+	is_valid_time = fix_date_obj > open_date_obj
+	if not is_valid_time:
+		return
 
-		self.bug_open_sha = utils.get_commit_before(rw.repo, self.open_date).hexsha
-		#self.bug_fix_sha = utils.get_commit_before(rw.repo, self.fix_date).hexsha
+	fixed_files = bug_element.findall("./fixedFiles/file")
 
-		#if self.bug_open_sha == self.bug_fix_sha:
-		#	self.valid = False
-		#	return
+	bug.bug_open_sha = utils.get_commit_before(rw.repo, bug.open_date).hexsha
 
-		existed_fixed_files_in_open_sha = utils.filter_existed_files(rw, fixed_files, commit=self.bug_open_sha)
-		#existed_fixed_files_in_fix_sha = self.check_file_exists(rw, fixed_files, commit=self.bug_fix_sha)
-		#merged_fixed_files = existed_fixed_files_in_open_sha & existed_fixed_files_in_fix_sha
-		merged_fixed_files = existed_fixed_files_in_open_sha
+	existed_fixed_files_in_open_sha = utils.filter_existed_files(rw, fixed_files, commit=bug.bug_open_sha)
 
-		#self.fixed_files = []
-		#for fixed_file in merged_fixed_files:
-		#	modified_content = rw.get_patch_text_of_file(self.bug_open_sha, self.bug_fix_sha, fixed_file)
-		#	if modified_content:
-		#		self.fixed_files.append(fixed_file)
+	bug.fixed_files = list(existed_fixed_files_in_open_sha)
 
-		self.fixed_files = list(merged_fixed_files)
+	# No fixed files found
+	if not bug.fixed_files:
+		return
 
-		# No fixed files found
-		if not self.fixed_files:
-			self.valid = False
-			return
-
-		self.valid = True
-
-		# Create embedding
-		self.embedding = None
+	return bug
 
 class RepoWrapper:
 	def __init__(self, project_root):
@@ -82,7 +64,7 @@ class RepoWrapper:
 
 		# Embeddings and data
 		self.embeddings_path = os.path.join(project_root, 'embeddings')
-		self.bug_data_path = os.path.join(project_root, 'bug_data.pickle')
+		self.bug_data_path = os.path.join(project_root, 'bug_data.json')
 		self.bug_embeddings_path = os.path.join(project_root, 'bug_embeddings.npy')
 
 		if not os.path.exists(self.embeddings_path):
@@ -94,20 +76,20 @@ class RepoWrapper:
 	def calculate_bug_data(self):
 		bug_elements = ET.parse(self.bug_file_path).getroot().findall('./bug')
 		for bug_element in bug_elements:
-			bug_object = Bug(self, bug_element)
-			if bug_object.valid:
+			bug_object = make_bug(self, bug_element)
+			if bug_object is not None:
 				yield bug_object
 
 	def load_bug_data(self):
 		'''Load bug data from file'''
 		if os.path.exists(self.bug_data_path):
-			with open(self.bug_data_path, 'rb') as f:
-				return pickle.load(f)
+			with open(self.bug_data_path, 'r') as f:
+				return [SimpleNamespace(**bug) for bug in json.load(f)]
 
-	def store_bug_data(self, data):
+	def store_bug_data(self, bugs):
 		'''Store bug data to file'''
-		with open(self.bug_data_path, 'wb') as f:
-			pickle.dump(data, f)
+		with open(self.bug_data_path, 'w') as f:
+			json.dump([vars(bug) for bug in bugs], f, ensure_ascii=False)
 
 	def load_bug_embeddings(self):
 		'''Load bug embeddings from file'''
@@ -120,30 +102,21 @@ class RepoWrapper:
 
 	def list_all_bug_objects_with_embeddings(self, bc):
 		# Calculate bug data
-		bug_objects = self.load_bug_data()
+		bug_objects = self.load_bug_data()  # Return None if not cached on disk
 		if bug_objects is None:
 			bug_objects = list(self.calculate_bug_data())
 			self.store_bug_data(bug_objects)
 
-		bug_texts = [bug_object.text for bug_object in bug_objects]
-
 		# Calculate bug embeddings
 		bug_embeddings = self.load_bug_embeddings()
 		if bug_embeddings is None:
+			bug_texts = [bug_object.text for bug_object in bug_objects]
 			bug_embeddings = bc.encode(bug_texts)
 			self.store_bug_embeddings(bug_embeddings)
 
 		for bug_object, bug_embedding in zip(bug_objects, bug_embeddings):
 			bug_object.embedding = bug_embedding
 			yield bug_object
-
-	def get_patch_text_of_file(self, sha_old, sha_new, file_path) -> str:
-		patch = self.repo.git.diff(sha_old, sha_new, '--', file_path)
-		return utils.sanitize_patch(patch)
-
-	def get_formatted_source_file(self, path, commit='master') -> str:
-		s = self.repo.git.show('%s:%s' % (commit, path))
-		return utils.format_source_file(s)
 
 	def get_source_embedding(self, bc, source_file, commit='master'):
 		last_commit_of_file = utils.get_last_commit_of_file(self.repo, path=source_file, commit=commit).hexsha
@@ -158,7 +131,7 @@ class RepoWrapper:
 			return np.load(embedding_data_path)
 		else:  # If not calculated before
 			logging.info('Embedding not found. Calculating...')
-			s = self.get_formatted_source_file(source_file, commit=commit)
+			s = utils.get_formatted_source_file(self.repo, source_file, commit=commit) or '.'
 			source_tokens = utils.get_token_groups(s)
 			source_embedding = bc.encode(source_tokens)
 			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use

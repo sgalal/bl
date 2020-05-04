@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List
 from urllib.parse import quote
 
-from config import CHUNK_SIZE, TOP_N
+from config import AVERAGE_N, CHUNK_SIZE, TOP_N
 
 JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 	"default", "goto", "package", "synchronized", "boolean", "do", "if",
@@ -109,7 +109,7 @@ def average_of_n_largest_in_array(arr, n):
 
 def get_similarity_score(bug_embedding, source_embedding):
 	similarities = cosine_similarity([bug_embedding], source_embedding)
-	maximum_similarity = average_of_n_largest_in_array(similarities, 2)  # Use the 2 maximum value as the final similarity
+	maximum_similarity = average_of_n_largest_in_array(similarities, AVERAGE_N)  # Use the N maximum value as the final similarity
 	return (maximum_similarity * 1000 - 930) / 20
 
 def calculate_top_n_rank(source_files, fixed_files):
@@ -165,8 +165,16 @@ def filter_existed_files(rw, fixed_files, commit='master') -> set:
 		for source_file in all_source_files_in_commit:
 			if trim_full_path(source_file) == fixed_file.text:
 				# Check the file is not empty
-				is_not_empty = bool(rw.get_formatted_source_file(source_file, commit=commit).rstrip())
+				is_not_empty = bool(get_formatted_source_file(rw.repo, source_file, commit=commit).rstrip())
 				if is_not_empty:
 					existed_fixed_files.add(source_file)
 
 	return existed_fixed_files
+
+def get_patch_text_of_file(repo, sha_old, sha_new, file_path) -> str:
+	patch = repo.git.diff(sha_old, sha_new, '--', file_path)
+	return sanitize_patch(patch)
+
+def get_formatted_source_file(repo, path, commit='master') -> str:
+	s = repo.git.show('%s:%s' % (commit, path))
+	return format_source_file(s)
