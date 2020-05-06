@@ -7,12 +7,17 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run predict')
 parser.add_argument('--project-root', help='path to the project root', required=True)
+parser.add_argument('--bert-port', type=int, default=5555)
+parser.add_argument('--bert-port-out', type=int, default=5556)
+parser.add_argument('--text-chunk-size', type=int, default=15)
+parser.add_argument('--bert-ip', help='IP address of the BERT server', default='localhost')
 args = parser.parse_args()
 
-# Modify the configuration below
-
 PROJECT_ROOT = args.project_root
+BERT_PORT = args.bert_port
+BERT_PORT_OUT = args.bert_port_out
+TEXT_CHUNK_SIZE = args.text_chunk_size
+BERT_IP = args.bert_ip
+
 TOP_N = 10  # Predict 10 possible files
-BERT_IP = '172.27.112.1'
-BERT_PORT = 5555
-BERT_PORT_OUT = 5556
+AVERAGE_N = 3

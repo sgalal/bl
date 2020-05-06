@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from typing import List
 from urllib.parse import quote
 
-from config import AVERAGE_N, CHUNK_SIZE, TOP_N
+from config import AVERAGE_N, TEXT_CHUNK_SIZE, TOP_N
 
 JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 	"default", "goto", "package", "synchronized", "boolean", "do", "if",
@@ -66,7 +66,7 @@ def format_source_file(s) -> str:
 
 def get_token_groups(s):
 	'''This is the actual tokens of file that feeds into the BERT model'''
-	return [' '.join(x) for x in chunks(s.split(), chunk_size=CHUNK_SIZE)]
+	return [' '.join(x) for x in chunks(s.split(), chunk_size=TEXT_CHUNK_SIZE)]
 
 def trim_full_path(s):
 	'''
@@ -158,17 +158,14 @@ def predict_bug(bc, rw, bug):
 def filter_existed_files(rw, fixed_files, commit='master') -> set:
 	'''Check a file path represents a valid file in the underlying Git repository, filter out the valid files'''
 	all_source_files_in_commit = list_all_source_files(rw.repo, commit=commit)
-
-	existed_fixed_files = set()
-	for fixed_file in fixed_files:
-		for source_file in all_source_files_in_commit:
-			if trim_full_path(source_file) == fixed_file.text:
-				# Check the file is not empty
-				is_not_empty = bool(get_formatted_source_file(rw.repo, source_file, commit=commit).rstrip())
-				if is_not_empty:
-					existed_fixed_files.add(source_file)
-
-	return existed_fixed_files
+	def inner():
+		for fixed_file in fixed_files:
+			for source_file in all_source_files_in_commit:
+				if trim_full_path(source_file) == fixed_file.text:
+					is_not_empty = bool(get_formatted_source_file(rw.repo, source_file, commit=commit).rstrip())  # Check the file is not empty
+					if is_not_empty:
+						yield source_file
+	return set(inner())
 
 def get_patch_text_of_file(repo, sha_old, sha_new, file_path) -> str:
 	patch = repo.git.diff(sha_old, sha_new, '--', file_path)

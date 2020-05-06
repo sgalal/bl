@@ -12,6 +12,7 @@ from types import SimpleNamespace
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import unescape
 
+from config import TEXT_CHUNK_SIZE
 import utils
 
 logging.basicConfig(level=logging.DEBUG)
@@ -27,14 +28,14 @@ def make_bug(rw, bug_element):
 	bug.id = unescape(bug_element.attrib['id'])
 	summary = unescape(bug_element.find('./buginformation/summary').text)
 	description = unescape(bug_element.find('./buginformation/description').text or '')
-	bug.text = summary + '. ' + description
+	bug.text = ' '.join(utils.format_source_file(summary + '. ' + description).split()[:TEXT_CHUNK_SIZE])
 
 	bug.open_date = unescape(bug_element.attrib.get('opendate'))
 	bug.fix_date = unescape(bug_element.attrib.get('fixdate'))
 	if not (bug.open_date and bug.fix_date):
 		return
 
-	# Ensure the open date is earlier than the close date
+	# Ensure the open date is earlier than the fix date
 	open_date_obj = datetime.strptime(bug.open_date, '%Y-%m-%d %H:%M:%S')
 	fix_date_obj = datetime.strptime(bug.fix_date, '%Y-%m-%d %H:%M:%S')
 	is_valid_time = fix_date_obj > open_date_obj
@@ -104,12 +105,14 @@ class RepoWrapper:
 		# Calculate bug data
 		bug_objects = self.load_bug_data()  # Return None if not cached on disk
 		if bug_objects is None:
+			logging.info('Bug object cache not found, calculating...')
 			bug_objects = list(self.calculate_bug_data())
 			self.store_bug_data(bug_objects)
 
 		# Calculate bug embeddings
 		bug_embeddings = self.load_bug_embeddings()
 		if bug_embeddings is None:
+			logging.info('Bug embedding cache not found, calculating...')
 			bug_texts = [bug_object.text for bug_object in bug_objects]
 			bug_embeddings = bc.encode(bug_texts)
 			self.store_bug_embeddings(bug_embeddings)
@@ -126,12 +129,15 @@ class RepoWrapper:
 		if not os.path.exists(revision_path):
 			os.mkdir(revision_path)
 		embedding_data_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.npy'
+		source_text_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.txt'  # Only for debug purpose
 
 		if os.path.exists(embedding_data_path):  # If the embedding is already calculated before
 			return np.load(embedding_data_path)
 		else:  # If not calculated before
 			logging.info('Embedding not found. Calculating...')
 			s = utils.get_formatted_source_file(self.repo, source_file, commit=commit) or '.'
+			with open(source_text_path, 'w', errors='ignore') as f:
+				f.write(s)  # Only for debug purpose
 			source_tokens = utils.get_token_groups(s)
 			source_embedding = bc.encode(source_tokens)
 			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use
