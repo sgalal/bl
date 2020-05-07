@@ -56,6 +56,8 @@ def make_bug(rw, bug_element):
 
 	return bug
 
+SOURCE_EMBEDDING_CACHE = {}
+
 class RepoWrapper:
 	def __init__(self, project_root):
 		# Constants
@@ -131,14 +133,21 @@ class RepoWrapper:
 		embedding_data_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.npy'
 		source_text_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.txt'  # Only for debug purpose
 
+		if (embedding_data_path, source_text_path) in SOURCE_EMBEDDING_CACHE:  # If the embedding is cached in memory
+			return SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path]
 		if os.path.exists(embedding_data_path):  # If the embedding is already calculated before
-			return np.load(embedding_data_path)
+			res = np.load(embedding_data_path)
+			SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
+			return res
 		else:  # If not calculated before
 			logging.info('Embedding not found. Calculating...')
 			s = utils.get_formatted_source_file(self.repo, source_file, commit=commit) or '.'
 			with open(source_text_path, 'w', errors='ignore') as f:
 				f.write(s)  # Only for debug purpose
 			source_tokens = utils.get_token_groups(s)
-			source_embedding = bc.encode(source_tokens)
-			np.save(embedding_data_path, source_embedding)  # Save the embedding for future use
-			return source_embedding
+			res = bc.encode(source_tokens)
+
+			np.save(embedding_data_path, res)  # Save the embedding for future use
+			SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
+
+			return res

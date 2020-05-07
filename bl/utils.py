@@ -2,13 +2,12 @@
 
 import io
 import logging
-import numpy as np
 import re
-from sklearn.metrics.pairwise import cosine_similarity
 from typing import List
 from urllib.parse import quote
 
-from config import AVERAGE_N, TEXT_CHUNK_SIZE, TOP_N
+from config import TEXT_CHUNK_SIZE, TOP_N
+import similarity
 
 JAVA_KEYWORDS = ["abstract", "continue", "for", "new", "switch", "assert",
 	"default", "goto", "package", "synchronized", "boolean", "do", "if",
@@ -47,7 +46,7 @@ def format_source_file(s) -> str:
 	# Remove imports
 	s = re.sub(r'^import .+\n', '', s, flags=re.MULTILINE)
 	s = re.sub(r'^.+? @author .+\n', '', s, flags=re.MULTILINE)
-	# Handle Java packages
+	# Handle Java packages and class methods
 	s = re.sub(r'(\S)\.(\S)', r'\1 \2', s)
 	# Handle camelcases
 	s = re.sub(r'(\S)_(\S)', r'\1 \2', s)
@@ -89,7 +88,7 @@ def sanitize_patch(patch):
 	return ''.join(inner())
 
 def list_all_source_files(repo, commit='master', pattern='.java') -> List[str]:
-	return [file.path for file in repo.tree(commit).traverse() if file.type == 'blob' and file.path.endswith(pattern)]
+	return (file for file in repo.tree(commit).traverse() if file.type == 'blob' and file.path.endswith(pattern))
 
 def get_commit_before(repo, time, branch='master') -> str:
 	'''Get the Git commit before a specific date'''
@@ -98,18 +97,6 @@ def get_commit_before(repo, time, branch='master') -> str:
 def get_last_commit_of_file(repo, path, commit='master') -> str:
 	'''Get the last commit of file before a specific commit'''
 	return next(repo.iter_commits(commit, paths=path, max_count=1))
-
-def average_of_n_largest_in_array(arr, n):
-	assert arr.shape[0] == 1
-	if arr.shape[1] <= n:
-		return np.mean(arr[0])
-	else:
-		return np.mean(np.partition(arr, -n)[0][-n:])
-
-def get_similarity_score(bug_embedding, source_embedding):
-	similarities = cosine_similarity([bug_embedding], source_embedding)
-	maximum_similarity = average_of_n_largest_in_array(similarities, AVERAGE_N)  # Use the N maximum value as the final similarity
-	return (maximum_similarity * 1000 - 930) / 20
 
 def calculate_top_n_rank(source_files, fixed_files):
 	return any(source_file == fixed_file for source_file in source_files[:TOP_N] for fixed_file in fixed_files)
@@ -134,10 +121,12 @@ def calculate_mrr(source_files, fixed_files):
 
 def predict_bug(bc, rw, bug):
 	def inner():
-		for source_file in list_all_source_files(rw.repo, commit=bug.bug_open_sha):
+		for file_object in list_all_source_files(rw.repo, commit=bug.bug_open_sha):
+			source_file = file_object.path
+
 			source_embedding = rw.get_source_embedding(bc, source_file, commit=bug.bug_open_sha)
 
-			similarity_score = get_similarity_score(bug.embedding, source_embedding)
+			similarity_score = similarity.get_similarity_score(bug.embedding, source_embedding)
 
 			final_score = similarity_score
 
@@ -150,19 +139,19 @@ def predict_bug(bc, rw, bug):
 	map_value = calculate_map(source_files, bug.fixed_files)
 	mrr_value = calculate_mrr(source_files, bug.fixed_files)
 
-	logging.info('Predicted files:\n%s', '\n'.join('%.6f %s' % (similarity_score, source_file) for similarity_score, source_file in similarity_scores_and_source_files[:TOP_N]))
-	logging.info('Fixed files:\n%s', '\n'.join(bug.fixed_files))
+	logging.debug('Predicted files:\n%s', '\n'.join('%.6f %s' % (similarity_score, source_file) for similarity_score, source_file in similarity_scores_and_source_files[:TOP_N]))
+	logging.debug('Fixed files:\n%s', '\n'.join(bug.fixed_files))
 
 	return top_n_rank, map_value, mrr_value
 
 def filter_existed_files(rw, fixed_files, commit='master') -> set:
 	'''Check a file path represents a valid file in the underlying Git repository, filter out the valid files'''
-	all_source_files_in_commit = list_all_source_files(rw.repo, commit=commit)
+	all_source_files_in_commit = list(list_all_source_files(rw.repo, commit=commit))
 	def inner():
-		for fixed_file in fixed_files:
+		for file_object in fixed_files:
 			for source_file in all_source_files_in_commit:
-				if trim_full_path(source_file) == fixed_file.text:
-					is_not_empty = bool(get_formatted_source_file(rw.repo, source_file, commit=commit).rstrip())  # Check the file is not empty
+				if trim_full_path(source_file) == file_object.path:
+					is_not_empty = bool(get_formatted_source_file_from_sha(rw.repo, file_object.hexsha).rstrip())  # Check the file is not empty
 					if is_not_empty:
 						yield source_file
 	return set(inner())
@@ -174,3 +163,7 @@ def get_patch_text_of_file(repo, sha_old, sha_new, file_path) -> str:
 def get_formatted_source_file(repo, path, commit='master') -> str:
 	s = repo.git.show('%s:%s' % (commit, path))
 	return format_source_file(s)
+
+def get_formatted_source_file_from_sha(repo, hexsha) -> str:
+	'''Get the content of a file object by its hexsha'''
+	return format_source_file(repo.git.cat_file(hexsha, '-p'))
