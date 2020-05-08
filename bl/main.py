@@ -27,7 +27,7 @@ def run(bc):
 		map_value += map_value_new
 		mrr_value += mrr_value_new
 
-		logging.info('%d/%d, Top N rank %.2f%%, map %.2f, mrr %.2f', i, bugs_len, top_n_rank / i * 100, map_value / i, mrr_value / i)
+		logging.info('%d/%d, Top N rank %.4f%%, map %.4f, mrr %.4f', i, bugs_len, top_n_rank / i * 100, map_value / i, mrr_value / i)
 		return i, top_n_rank, map_value, mrr_value
 
 	reduce(f, bugs, (0, 0, 0, 0))
