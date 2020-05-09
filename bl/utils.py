@@ -87,14 +87,14 @@ def sanitize_patch(patch):
 					yield line[1:]
 	return ''.join(inner())
 
-def list_all_source_files(repo, commit='master', pattern='.java') -> List[str]:
+def list_all_source_files(repo, commit='master', pattern='.java'):
 	return (file for file in repo.tree(commit).traverse() if file.type == 'blob' and file.path.endswith(pattern))
 
-def get_commit_before(repo, time, branch='master') -> str:
+def get_commit_before(repo, time, branch='master'):
 	'''Get the Git commit before a specific date'''
 	return next(repo.iter_commits(branch, before=time, max_count=1))
 
-def get_last_commit_of_file(repo, path, commit='master') -> str:
+def get_last_commit_of_file(repo, path, commit='master'):
 	'''Get the last commit of file before a specific commit'''
 	return next(repo.iter_commits(commit, paths=path, max_count=1))
 
@@ -127,10 +127,17 @@ def predict_bug(bc, rw, bug):
 			source_embedding = rw.get_source_embedding(bc, source_file, commit=bug.bug_open_sha)
 
 			similarity_score = similarity.get_similarity_score(bug.embedding, source_embedding)
+			#length_score = get_length_score(rw.repo, source_file, commit=bug.bug_open_sha)
+			#time_score = get_time_score(rw.repo, source_file, commit=bug.bug_open_sha)
 
+			logging.debug('Similarity score: %.4f', similarity_score)
+			#logging.debug('Length score: %.4f', length_score)
+			#logging.debug('Time score: %.4f', time_score)
+
+			# final_score = similarity_score + length_score + time_score
 			final_score = similarity_score
 
-			yield similarity_score, source_file
+			yield final_score, source_file
 	similarity_scores_and_source_files = sorted(inner(), reverse=True)
 
 	source_files = [source_file for _, source_file in similarity_scores_and_source_files]
@@ -167,3 +174,15 @@ def get_formatted_source_file(repo, path, commit='master') -> str:
 def get_formatted_source_file_from_sha(repo, hexsha) -> str:
 	'''Get the content of a file object by its hexsha'''
 	return format_source_file(repo.git.cat_file(hexsha, '-p'))
+
+def get_length_score(repo, source_file, commit='master') -> float:
+	s = repo.git.show('%s:%s' % (commit, source_file))
+	l = len(s)
+	return 0.1 - ((l ** 0.2) / 1600)
+
+def get_time_score(repo, source_file, commit='master') -> float:
+	commit_time = repo.commit(commit).committed_datetime
+	last_modified_time = get_last_commit_of_file(repo, source_file, commit).committed_datetime
+	delta = (commit_time - last_modified_time).total_seconds()
+	delta = 0.001 if delta <= 0 else float(delta)
+	return (10000 / delta) ** 0.08

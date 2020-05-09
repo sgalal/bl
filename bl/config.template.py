@@ -20,4 +20,4 @@ TEXT_CHUNK_SIZE = args.text_chunk_size
 BERT_IP = args.bert_ip
 
 TOP_N = 10  # Predict 10 possible files
-AVERAGE_N = 3
+AVERAGE_N = 1

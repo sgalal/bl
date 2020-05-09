@@ -12,7 +12,7 @@ def average_of_n_largest_in_array(arr, n):
 	else:
 		return np.mean(np.partition(arr, -n)[0][-n:])
 
-def get_similarity_score(bug_embedding, source_embedding):
+def get_similarity_score(bug_embedding, source_embedding) -> float:
 	similarities = cosine_similarity([bug_embedding], source_embedding)
 	maximum_similarity = average_of_n_largest_in_array(similarities, AVERAGE_N)  # Use the N maximum value as the final similarity
-	return (maximum_similarity * 1000 - 930) / 20
+	return maximum_similarity * 50 - 46.5
