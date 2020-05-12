@@ -56,8 +56,6 @@ def make_bug(rw, bug_element):
 
 	return bug
 
-SOURCE_EMBEDDING_CACHE = {}
-
 class RepoWrapper:
 	def __init__(self, project_root):
 		# Constants
@@ -75,6 +73,9 @@ class RepoWrapper:
 
 		# Objects
 		self.repo = Repo(self.repo_path)
+
+		# Cache
+		self.SOURCE_EMBEDDING_CACHE = {}
 
 	def calculate_bug_data(self):
 		bug_elements = ET.parse(self.bug_file_path).getroot().findall('./bug')
@@ -133,11 +134,11 @@ class RepoWrapper:
 		embedding_data_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.npy'
 		source_text_path = os.path.join(revision_path, utils.url_encode(source_file)) + '.txt'  # Only for debug purpose
 
-		if (embedding_data_path, source_text_path) in SOURCE_EMBEDDING_CACHE:  # If the embedding is cached in memory
-			return SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path]
+		if (embedding_data_path, source_text_path) in self.SOURCE_EMBEDDING_CACHE:  # If the embedding is cached in memory
+			return self.SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path]
 		if os.path.exists(embedding_data_path):  # If the embedding is already calculated before
 			res = np.load(embedding_data_path)
-			SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
+			self.SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
 			return res
 		else:  # If not calculated before
 			logging.info('Embedding not found. Calculating...')
@@ -148,6 +149,6 @@ class RepoWrapper:
 			res = bc.encode(source_tokens)
 
 			np.save(embedding_data_path, res)  # Save the embedding for future use
-			SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
+			self.SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
 
 			return res
