@@ -21,9 +21,9 @@ def make_bug(rw, bug_element):
 	bug = SimpleNamespace()
 
 	# Ensure the bug is fixed (not a duplicate bug report)
-	is_fixed = bug_element.attrib.get('resolution') in ('Fixed', 'Complete')
-	if not is_fixed:
-		return
+	#is_fixed = bug_element.attrib.get('resolution') in ('Fixed', 'Complete')
+	#if not is_fixed:
+	#	return
 
 	bug.id = unescape(bug_element.attrib['id'])
 	summary = unescape(bug_element.find('./buginformation/summary').text)
