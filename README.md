@@ -115,3 +115,7 @@ $ pip install bert-serving-client "GitPython>=3.1,<3.2"
 $ . venv/bin/activate
 $ bl/run_predict.py --project-root ../Bench4BL/data/Commons/COMPRESS
 ```
+
+# Initialize bugs
+
+1. Run `initialize_bugs.py`

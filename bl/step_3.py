@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncio
 from bert_serving.client import BertClient
-from functools import partial, reduce
+from functools import reduce
 import logging
-from multiprocessing import Pool
 import sys
 import traceback
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
 from git import Repo
 import json
 import logging
@@ -8,53 +7,10 @@ import numpy as np
 import os
 import pickle
 import re
-from types import SimpleNamespace
-import xml.etree.ElementTree as ET
-from xml.sax.saxutils import unescape
 
-from config import TEXT_CHUNK_SIZE
 import utils
 
 logging.basicConfig(level=logging.DEBUG)
-
-def make_bug(rw, bug_element):
-	bug = SimpleNamespace()
-
-	# Ensure the bug is fixed (not a duplicate bug report)
-	is_fixed = bug_element.attrib.get('resolution') in ('Fixed', 'Complete')
-	if not is_fixed:
-		return
-
-	bug.id = unescape(bug_element.attrib['id'])
-	summary = unescape(bug_element.find('./buginformation/summary').text)
-	description = unescape(bug_element.find('./buginformation/description').text or '')
-	bug.text = ' '.join(utils.format_source_file(summary + '. ' + description).split()[:TEXT_CHUNK_SIZE])
-
-	bug.open_date = unescape(bug_element.attrib.get('opendate'))
-	bug.fix_date = unescape(bug_element.attrib.get('fixdate'))
-	if not (bug.open_date and bug.fix_date):
-		return
-
-	# Ensure the open date is earlier than the fix date
-	open_date_obj = datetime.strptime(bug.open_date, '%Y-%m-%d %H:%M:%S')
-	fix_date_obj = datetime.strptime(bug.fix_date, '%Y-%m-%d %H:%M:%S')
-	is_valid_time = fix_date_obj > open_date_obj
-	if not is_valid_time:
-		return
-
-	fixed_files = bug_element.findall("./fixedFiles/file")
-
-	bug.bug_open_sha = utils.get_commit_before(rw.repo, bug.open_date).hexsha
-
-	existed_fixed_files_in_open_sha = utils.filter_existed_files(rw, fixed_files, commit=bug.bug_open_sha)
-
-	bug.fixed_files = list(existed_fixed_files_in_open_sha)
-
-	# No fixed files found
-	if not bug.fixed_files:
-		return
-
-	return bug
 
 class RepoWrapper:
 	def __init__(self, project_root):
@@ -76,24 +32,6 @@ class RepoWrapper:
 
 		# Cache
 		self.SOURCE_EMBEDDING_CACHE = {}
-
-	def calculate_bug_data(self):
-		bug_elements = ET.parse(self.bug_file_path).getroot().findall('./bug')
-		for bug_element in bug_elements:
-			bug_object = make_bug(self, bug_element)
-			if bug_object is not None:
-				yield bug_object
-
-	def load_bug_data(self):
-		'''Load bug data from file'''
-		if os.path.exists(self.bug_data_path):
-			with open(self.bug_data_path, 'r') as f:
-				return [SimpleNamespace(**bug) for bug in json.load(f)]
-
-	def store_bug_data(self, bugs):
-		'''Store bug data to file'''
-		with open(self.bug_data_path, 'w') as f:
-			json.dump([vars(bug) for bug in bugs], f, ensure_ascii=False)
 
 	def load_bug_embeddings(self):
 		'''Load bug embeddings from file'''

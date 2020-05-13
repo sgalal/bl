@@ -61,38 +61,14 @@ def format_source_file(s) -> str:
 	# Remove redundant whitespaces
 	s = re.sub(r'\s+', ' ', s)
 	# Lower the characters since we are using the uncased BERT model
-	return s.lower()
+	return s.lower().strip()
 
 def get_token_groups(s):
 	'''This is the actual tokens of file that feeds into the BERT model'''
 	return [' '.join(x) for x in chunks(s.split(), chunk_size=TEXT_CHUNK_SIZE)]
 
-def trim_full_path(s):
-	'''
-	>>> trim_full_path('spring-rabbit/src/main/java/org/springframework/amqp/rabbit/listener/BlockingQueueConsumer.java')
-	'org.springframework.amqp.rabbit.listener.BlockingQueueConsumer.java'
-	'''
-	return re.sub(r'^.+?/java/', '', s, flags=re.MULTILINE).replace('/', '.')
-
-def sanitize_patch(patch):
-	'''Sanitize the output of git diff to keep only the removed part ans its context'''
-	if not patch:  # The file is actually not modified
-		return patch
-	def inner():
-		with io.StringIO(patch) as f:
-			for _ in range(5):
-				next(f)  # Skip patch header
-			for line in f:
-				if line and line[0] in '- ':  # The line is a removed line or its context
-					yield line[1:]
-	return ''.join(inner())
-
 def list_all_source_files(repo, commit='master', pattern='.java'):
 	return (file for file in repo.tree(commit).traverse() if file.type == 'blob' and file.path.endswith(pattern))
-
-def get_commit_before(repo, time, branch='master'):
-	'''Get the Git commit before a specific date'''
-	return next(repo.iter_commits(branch, before=time, max_count=1))
 
 def get_last_commit_of_file(repo, path, commit='master'):
 	'''Get the last commit of file before a specific commit'''
@@ -150,22 +126,6 @@ def predict_bug(bc, rw, bug):
 	logging.debug('Fixed files:\n%s', '\n'.join(bug.fixed_files))
 
 	return top_n_rank, map_value, mrr_value
-
-def filter_existed_files(rw, fixed_files, commit='master') -> set:
-	'''Check a file path represents a valid file in the underlying Git repository, filter out the valid files'''
-	all_source_files_in_commit = list(list_all_source_files(rw.repo, commit=commit))
-	def inner():
-		for file_object in fixed_files:
-			for source_file in all_source_files_in_commit:
-				if trim_full_path(source_file) == file_object.path:
-					is_not_empty = bool(get_formatted_source_file_from_sha(rw.repo, file_object.hexsha).rstrip())  # Check the file is not empty
-					if is_not_empty:
-						yield source_file
-	return set(inner())
-
-def get_patch_text_of_file(repo, sha_old, sha_new, file_path) -> str:
-	patch = repo.git.diff(sha_old, sha_new, '--', file_path)
-	return sanitize_patch(patch)
 
 def get_formatted_source_file(repo, path, commit='master') -> str:
 	s = repo.git.show('%s:%s' % (commit, path))
