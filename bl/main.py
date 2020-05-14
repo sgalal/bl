@@ -8,6 +8,7 @@ import logging
 from multiprocessing import Pool
 import sys
 import traceback
+from sentence_transformers import SentenceTransformer
 
 from config import BERT_IP, BERT_PORT, BERT_PORT_OUT, PROJECT_ROOT
 from repowrapper import RepoWrapper
@@ -32,16 +33,6 @@ def run(bc):
 
 	reduce(f, bugs, (0, 0, 0, 0))
 
-def main():
-	with BertClient(ip=BERT_IP, port=BERT_PORT, port_out=BERT_PORT_OUT, show_server_config=logging.root.isEnabledFor(logging.DEBUG)) as bc:
-		logging.info('Connected to BERT server')
-		try:
-			run(bc)
-		except:
-			exc_type, exc_value, exc_traceback = sys.exc_info()
-			traceback.print_exception(exc_type, exc_value, exc_traceback, file=sys.stderr)
-		finally:
-			logging.info('Closing the BERT server connection')
-
 if __name__ == '__main__':
-	main()
+	bc = SentenceTransformer('bert-base-nli-mean-tokens')
+	logging.info('Connected to BERT server')
