@@ -157,10 +157,11 @@ def filter_existed_files(rw, fixed_files, commit='master') -> set:
 	def inner():
 		for file_object in fixed_files:
 			for source_file in all_source_files_in_commit:
-				if trim_full_path(source_file) == file_object.path:
-					is_not_empty = bool(get_formatted_source_file_from_sha(rw.repo, file_object.hexsha).rstrip())  # Check the file is not empty
+				#if '.'.join(trim_full_path(source_file.path).split('.')[-2:]) == '.'.join(file_object.text.replace('/', '.').split('.')[-2:]):
+				if trim_full_path(source_file.path) == file_object.text:
+					is_not_empty = bool(get_formatted_source_file_from_sha(rw.repo, source_file.hexsha).rstrip())  # Check the file is not empty
 					if is_not_empty:
-						yield source_file
+						yield source_file.path
 	return set(inner())
 
 def get_patch_text_of_file(repo, sha_old, sha_new, file_path) -> str:

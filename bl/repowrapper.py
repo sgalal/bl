@@ -33,6 +33,7 @@ def make_bug(rw, bug_element):
 	bug.open_date = unescape(bug_element.attrib.get('opendate'))
 	bug.fix_date = unescape(bug_element.attrib.get('fixdate'))
 	if not (bug.open_date and bug.fix_date):
+		print(1)
 		return
 
 	# Ensure the open date is earlier than the fix date
@@ -40,6 +41,7 @@ def make_bug(rw, bug_element):
 	fix_date_obj = datetime.strptime(bug.fix_date, '%Y-%m-%d %H:%M:%S')
 	is_valid_time = fix_date_obj > open_date_obj
 	if not is_valid_time:
+		print(2)
 		return
 
 	fixed_files = bug_element.findall("./fixedFiles/file")
@@ -52,8 +54,10 @@ def make_bug(rw, bug_element):
 
 	# No fixed files found
 	if not bug.fixed_files:
+		print(3)
 		return
 
+	print(4)
 	return bug
 
 class RepoWrapper:
@@ -146,7 +150,7 @@ class RepoWrapper:
 			with open(source_text_path, 'w', errors='ignore') as f:
 				f.write(s)  # Only for debug purpose
 			source_tokens = utils.get_token_groups(s)
-			res = bc.encode(source_tokens)
+			res = bc.encode(source_tokens or ['.'])
 
 			np.save(embedding_data_path, res)  # Save the embedding for future use
 			self.SOURCE_EMBEDDING_CACHE[embedding_data_path, source_text_path] = res
